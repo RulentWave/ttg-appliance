@@ -35,6 +35,7 @@ modules:
         - inotify-tools
         - udisks2
         - vsftpd
+        - wireshark-cli
   - type: systemd
     system:
       enabled:
