@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/sh /usr/local/bin/watch-share.sh
+ExecStart=/usr/bin/sh /usr/scripts/watch-share.sh
 Restart=always
 StandardOutput=syslog
 StandardError=syslog
