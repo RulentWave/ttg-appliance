@@ -12,6 +12,12 @@ else
     exit 1
 fi
 
+# This removes hidden Windows carriage returns (\r) that break URLs and Headers
+TENANT_ID=$(echo "${TENANT_ID:-}" | tr -d '\r')
+CLIENT_ID=$(echo "${CLIENT_ID:-}" | tr -d '\r')
+CLIENT_SECRET=$(echo "${CLIENT_SECRET:-}" | tr -d '\r')
+SMBPASSWORD=$(echo "${SMBPASSWORD:-}" | tr -d '\r')
+
 # Ensure required vars are set
 if [[ -z "${TENANT_ID:-}" ]] || [[ -z "${CLIENT_ID:-}" ]] || [[ -z "${CLIENT_SECRET:-}" ]] || [[ -z "${SMBPASSWORD:-}" ]]; then
     echo "Error: One or more required environment variables are missing."
@@ -110,6 +116,7 @@ if pdbedit -L scans > /dev/null 2>&1; then
 fi
 
 echo "Adding user 'scans' with provided hash..."
-pdbedit -a -u scans --set-nt-hash="$SMBPASSWORD"
+pdbedit -a -u scans -t
+pdbedit -u scans --set-nt-hash="$SMBPASSWORD"
 
 echo "Done."
