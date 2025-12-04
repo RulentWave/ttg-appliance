@@ -1,0 +1,23 @@
+[Unit]
+Description=Sync Azure AD Users to Samba Folders
+# Ensure network is up before running
+After=network-online.target
+Wants=network-online.target
+# Optional: Wait for Samba to be ready if you want to be extra safe
+# After=smb.service nmb.service
+
+[Service]
+Type=oneshot
+# Execute the script
+ExecStart=sh /usr/scripts/init-share.sh
+# Run as root so it can mkdir, chown, and pdbedit
+User=root
+# Clean up environment to ensure no leaked vars, but keeping necessary paths
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# Optional: What to do if it fails?
+# Restart=on-failure
+# RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
