@@ -27,6 +27,9 @@ fi
 BASE_DIR="/srv/share"
 mkdir -p "$BASE_DIR"
 
+echo "clearing old share"
+rm -rf $BASE_DIR/*
+
 echo "Retrieving access token..."
 # Step 1: Get an app-only access token
 TOKEN_RESPONSE=$(curl -s -X POST "https://login.microsoftonline.com/$TENANT_ID/oauth2/v2.0/token" \
