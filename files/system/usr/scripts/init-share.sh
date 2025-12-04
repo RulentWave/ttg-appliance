@@ -106,17 +106,6 @@ chown -R scans:scans "$BASE_DIR"
 
 echo "Configuring Samba user 'scans'..."
 
-# Check if user exists in pdbedit to determine if we add (-a) or update
-if pdbedit -L scans > /dev/null 2>&1; then
-    echo "User 'scans' exists. Updating hash."
-    # Use smbpasswd or pdbedit without -a to update? 
-    # pdbedit doesn't have a clean 'update' flag for hashes without -a in some versions.
-    # It is often easier to delete and re-add to ensure the hash is set exactly as requested.
-    pdbedit -x -u scans
-fi
-
-echo "Adding user 'scans' with provided hash..."
-pdbedit -a -u scans -t
-pdbedit -u scans --set-nt-hash="$SMBPASSWORD"
+(echo "$SMBPASSWORD"; echo "$SMBPASSWORD") | smbpasswd -s -a scans
 
 echo "Done."
