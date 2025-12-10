@@ -39,16 +39,18 @@ modules:
         - udisks2
         - wireshark-cli
         - tailscale
+        - dos2unix
   - type: systemd
     system:
       enabled:
         - smb.service
         - watch-share.service
         - init-share.service
+        - init-tailscale.service
         - bootc-fetch-apply-updates.timer
         - btrfs-scrub.timer
         - btrfs-trim.timer
-        - tailscaled
+        - tailscaled.service
       disabled:
         - zincati.service
 

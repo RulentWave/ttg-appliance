@@ -12,11 +12,6 @@ else
     exit 1
 fi
 
-# This removes hidden Windows carriage returns (\r) that break URLs and Headers
-TENANT_ID=$(echo "${TENANT_ID:-}" | tr -d '\r')
-CLIENT_ID=$(echo "${CLIENT_ID:-}" | tr -d '\r')
-CLIENT_SECRET=$(echo "${CLIENT_SECRET:-}" | tr -d '\r')
-SMBPASSWORD=$(echo "${SMBPASSWORD:-}" | tr -d '\r')
 
 # Ensure required vars are set
 if [[ -z "${TENANT_ID:-}" ]] || [[ -z "${CLIENT_ID:-}" ]] || [[ -z "${CLIENT_SECRET:-}" ]] || [[ -z "${SMBPASSWORD:-}" ]]; then
