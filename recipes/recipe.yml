@@ -42,6 +42,7 @@ modules:
         - dos2unix
         - tayga
         - radvd
+        - traceroute
   - type: systemd
     system:
       enabled:
