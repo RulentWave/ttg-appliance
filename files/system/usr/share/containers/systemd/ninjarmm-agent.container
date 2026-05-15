@@ -1,0 +1,21 @@
+[Unit]
+Description=NinjaRMM Agent
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/etc/containers/systemd/ninjarmm/ninjarmm-agent.rpm
+
+[Container]
+Image=localhost/ninjarmm-agent:latest
+ContainerName=ninjarmm-agent
+HostName=%H-ninja
+Volume=ninjarmm-agent-data.volume:/opt/NinjaRMMAgent
+Network=host
+AutoUpdate=local
+
+[Service]
+Restart=always
+RestartSec=5
+TimeoutStopSec=90
+
+[Install]
+WantedBy=multi-user.target default.target

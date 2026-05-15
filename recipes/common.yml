@@ -7,7 +7,9 @@ modules:
   - type: dnf
     repos:
       files:
-        - https://pkgs.tailscale.com/stable/fedora/tailscale.repo
+        - tailscale.repo
+      keys:
+        - keys/tailscale-fedora-repo.gpg
     install:
       packages:
         - clevis

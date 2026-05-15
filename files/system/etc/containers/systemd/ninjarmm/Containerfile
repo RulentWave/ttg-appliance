@@ -1,0 +1,17 @@
+FROM registry.access.redhat.com/ubi9/ubi
+
+# Install dependencies the agent is likely to need
+RUN dnf install -y \
+        libstdc++ \
+        openssl \
+        ca-certificates \
+    && dnf clean all
+
+COPY ninjarmm-agent.rpm /tmp/ninjarmm-agent.rpm
+RUN rpm -ivh /tmp/ninjarmm-agent.rpm \
+    && rm -f /tmp/ninjarmm-agent.rpm
+
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

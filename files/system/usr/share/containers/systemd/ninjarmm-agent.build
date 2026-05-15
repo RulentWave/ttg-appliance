@@ -1,0 +1,9 @@
+[Unit]
+ConditionPathExists=/etc/containers/systemd/ninjarmm/ninjarmm-agent.rpm
+
+[Build]
+ImageTag=localhost/ninjarmm-agent:latest
+SetWorkingDirectory=/etc/containers/systemd/ninjarmm
+
+[Install]
+WantedBy=multi-user.target

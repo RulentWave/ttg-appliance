@@ -8,10 +8,10 @@ modules:
       enabled:
         - init-tailscale.service
         - tailscaled.service
+        - tayga.service
+        - nat64dns.service
       disabled:
         - zincati.service
         - smb.service
         - watch-share.service
         - init-share.service
-        - nat64dns.service
-        - tayga.service
