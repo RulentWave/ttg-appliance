@@ -36,7 +36,7 @@ modules:
         - python3-netifaces
   - type: script
     scripts:
-      - netdata-kickstart.sh
+      - netdata-kickstart.sh --disable-telemetry --non-interactive
   - type: systemd
     system:
       enabled:
