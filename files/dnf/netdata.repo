@@ -1,0 +1,17 @@
+[netdata]
+name=Netdata
+baseurl=https://repository.netdata.cloud/repos/stable/fedora/$releasever/$basearch
+repo_gpgcheck=1
+gpgcheck=1
+enabled=1
+sslverify=1
+priority=50
+
+[netdata-repoconfig]
+name=Netdata Repository Config
+baseurl=https://repository.netdata.cloud/repos/repoconfig/fedora/$releasever/$basearch
+repo_gpgcheck=1
+gpgcheck=1
+enabled=1
+sslverify=1
+priority=50

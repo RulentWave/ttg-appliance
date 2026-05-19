@@ -8,8 +8,11 @@ modules:
     repos:
       files:
         - tailscale.repo
+        - netdata.repo
       keys:
         - keys/tailscale-fedora-repo.gpg
+        - keys/netdatabot.gpg.key
+        - keys/netdatabot.gpg.old.key
     install:
       packages:
         - clevis
@@ -34,9 +37,7 @@ modules:
         - nmap
         - python3-dnslib
         - python3-netifaces
-  - type: script
-    scripts:
-      - netdata-kickstart.sh --disable-telemetry --non-interactive
+        - netdata
   - type: systemd
     system:
       enabled:
