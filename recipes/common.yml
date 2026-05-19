@@ -12,7 +12,6 @@ modules:
       keys:
         - keys/tailscale-fedora-repo.gpg
         - keys/netdatabot.gpg.key
-        - keys/netdatabot.gpg.old.key
     install:
       packages:
         - clevis
