@@ -34,6 +34,9 @@ modules:
         - nmap
         - python3-dnslib
         - python3-netifaces
+  - type: script
+    scripts:
+      - netdata-kickstart.sh
   - type: systemd
     system:
       enabled:
