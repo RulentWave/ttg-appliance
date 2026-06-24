@@ -1,9 +1,10 @@
 import asyncio
 import ipaddress
 import os
-import netifaces
 from typing import Optional
-from dnslib import DNSRecord, DNSHeader, RR, AAAA, QTYPE, RCODE
+
+import netifaces
+from dnslib import AAAA, QTYPE, RCODE, RR, SOA, DNSHeader, DNSRecord
 
 # Configuration
 INTERFACE_NAME = "tailscale0"
@@ -14,6 +15,13 @@ NAT64_PREFIX_FILE = "/etc/tayga/default.conf"
 UPSTREAM_DNS = "127.0.0.53"
 UPSTREAM_PORT = 53
 
+# Synthetic SOA for .nat64 compatibility (especially Windows resolvers)
+NAT64_ZONE = f"{NAT64_SUFFIX}."
+SYNTHETIC_SOA_MNAME = "ns1.nat64."
+SYNTHETIC_SOA_RNAME = "dns-admin.nat64."
+SYNTHETIC_SOA_TIMES = (1, 300, 60, 86400, 60)
+SYNTHETIC_SOA_TTL = 60
+
 
 def get_interface_ipv6_addrs(iface_name):
     """
@@ -23,12 +31,12 @@ def get_interface_ipv6_addrs(iface_name):
         if iface_name not in netifaces.interfaces():
             print(f"Interface {iface_name} not found.")
             return []
-        
+
         addrs = netifaces.ifaddresses(iface_name)
         # AF_INET6 is usually integer 10 or 30 depending on OS, netifaces handles this
         if netifaces.AF_INET6 in addrs:
             # Extract just the IP strings, removing scope IDs (e.g. %tailscale0) if present
-            return [x['addr'].split('%')[0] for x in addrs[netifaces.AF_INET6]]
+            return [x["addr"].split("%")[0] for x in addrs[netifaces.AF_INET6]]
         return []
     except Exception as e:
         print(f"Error getting addresses for {iface_name}: {e}")
@@ -101,18 +109,18 @@ async def load_nat64_prefix_async():
         try:
             with open(NAT64_PREFIX_FILE, "r") as f:
                 lines = f.readlines()
-            
+
             for line in lines:
                 line = line.strip()
                 if not line or line.startswith("#"):
                     continue
-                    
+
                 if line.startswith("prefix"):
                     parts = line.split()
                     if len(parts) >= 2:
                         return parts[1]
             return None
-            
+
         except FileNotFoundError:
             # File doesn't exist, just return None
             return None
@@ -132,6 +140,7 @@ async def load_nat64_prefix_async():
     except ValueError:
         print(f"Invalid IPv6 prefix format: {ipv6_prefix_str}")
         return None
+
 
 class NAT64Resolver:
     def resolve(self, qname_str):
@@ -190,6 +199,32 @@ class NAT64Resolver:
         return ipaddress.IPv6Address(final_int)
 
 
+def is_nat64_name(qname: str) -> bool:
+    clean_qname = qname.lower().rstrip(".")
+    return clean_qname == NAT64_SUFFIX or clean_qname.endswith(f".{NAT64_SUFFIX}")
+
+
+def make_nat64_soa_rr() -> RR:
+    return RR(
+        rname=NAT64_ZONE,
+        rtype=QTYPE.SOA,
+        rclass=1,
+        ttl=SYNTHETIC_SOA_TTL,
+        rdata=SOA(SYNTHETIC_SOA_MNAME, SYNTHETIC_SOA_RNAME, SYNTHETIC_SOA_TIMES),
+    )
+
+
+def ensure_nat64_soa_on_noerror(reply: DNSRecord, qname: str) -> None:
+    # Include synthetic SOA for NOERROR responses in the .nat64 zone with no answers.
+    if (
+        reply.header.rcode == RCODE.NOERROR
+        and len(reply.rr) == 0
+        and is_nat64_name(qname)
+        and not any(rr.rtype == QTYPE.SOA for rr in reply.auth)
+    ):
+        reply.add_auth(make_nat64_soa_rr())
+
+
 async def resolve_upstream_dns64(qname, nat64_net):
     """
     Queries upstream for A records and synthesizes AAAA records async.
@@ -243,7 +278,12 @@ class DNSServerProtocol(asyncio.DatagramProtocol):
 
             resolver = NAT64Resolver()
 
-            if qtype == QTYPE.AAAA:
+            if qtype == QTYPE.SOA and qname.lower().rstrip(".") == NAT64_SUFFIX:
+                # Answer SOA queries for nat64. directly.
+                reply.add_answer(make_nat64_soa_rr())
+                print(f"Query: {qname} [SOA] -> synthetic nat64 SOA")
+
+            elif qtype == QTYPE.AAAA:
                 # 1. Custom Resolution
                 result_ip = resolver.resolve(qname)
 
@@ -263,9 +303,7 @@ class DNSServerProtocol(asyncio.DatagramProtocol):
                     nat64_net = await load_nat64_prefix_async()
 
                     if nat64_net:
-                        synthesized_ips = await resolve_upstream_dns64(
-                            qname, nat64_net
-                        )
+                        synthesized_ips = await resolve_upstream_dns64(qname, nat64_net)
                         if synthesized_ips:
                             for ip in synthesized_ips:
                                 reply.add_answer(
@@ -282,30 +320,34 @@ class DNSServerProtocol(asyncio.DatagramProtocol):
                             )
                         else:
                             reply.header.rcode = RCODE.NOERROR
-                            print(
-                                f"Query: {qname} [DNS64] -> Empty or Upstream Fail"
-                            )
+                            ensure_nat64_soa_on_noerror(reply, qname)
+                            print(f"Query: {qname} [DNS64] -> Empty or Upstream Fail")
                     else:
                         reply.header.rcode = RCODE.NOERROR
+                        ensure_nat64_soa_on_noerror(reply, qname)
                         print(f"Query: {qname} [Failed] -> No Prefix File")
             else:
                 reply.header.rcode = RCODE.NOERROR
+                ensure_nat64_soa_on_noerror(reply, qname)
 
             self.transport.sendto(reply.pack(), addr)
 
         except Exception as e:
             print(f"Error processing request from {addr}: {e}")
 
+
 async def main():
     loop = asyncio.get_running_loop()
 
     initial_check = await load_nat64_prefix_async()
     if not initial_check:
-        print(f"WARNING: {NAT64_PREFIX_FILE} not found or invalid. Fallback DNS64 will not work.")
+        print(
+            f"WARNING: {NAT64_PREFIX_FILE} not found or invalid. Fallback DNS64 will not work."
+        )
 
     # Get IPs specifically for tailscale0
     listen_ips = get_interface_ipv6_addrs(INTERFACE_NAME)
-    
+
     if not listen_ips:
         print(f"No IPv6 addresses found on {INTERFACE_NAME}. Exiting.")
         return
@@ -318,8 +360,7 @@ async def main():
             print(f"Binding to {INTERFACE_NAME} -> [{ip}]:{LISTEN_PORT}")
             try:
                 transport, _ = await loop.create_datagram_endpoint(
-                    lambda: DNSServerProtocol(),
-                    local_addr=(ip, LISTEN_PORT)
+                    lambda: DNSServerProtocol(), local_addr=(ip, LISTEN_PORT)
                 )
                 transports.append(transport)
             except OSError as e:
@@ -330,17 +371,20 @@ async def main():
             return
 
         print("DNS Server is running.")
-        
+
         try:
-            await asyncio.Future() # Run forever
+            await asyncio.Future()  # Run forever
         finally:
             for t in transports:
                 t.close()
 
     except PermissionError:
-        print(f"Permission denied. Try running with sudo/admin privileges to bind to port {LISTEN_PORT}.")
+        print(
+            f"Permission denied. Try running with sudo/admin privileges to bind to port {LISTEN_PORT}."
+        )
     except Exception as e:
         print(f"Fatal error: {e}")
+
 
 if __name__ == "__main__":
     asyncio.run(main())
