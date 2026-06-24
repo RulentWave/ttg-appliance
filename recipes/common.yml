@@ -33,6 +33,7 @@ modules:
         - smartmontools
         - nmap
         - python3-dnslib
+        - helix
         - python3-netifaces
   - type: systemd
     system:
