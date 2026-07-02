@@ -9,4 +9,4 @@ else
     exit 1
 fi
 
-/usr/sbin/tailscale up --auth-key="$TAILSCALE_KEY"
+/usr/sbin/tailscale up --auth-key="$TAILSCALE_KEY" --accept-dns=false
