@@ -35,6 +35,7 @@ modules:
         - python3-dnslib
         - helix
         - python3-netifaces
+        - https://github.com/Tera-Tech-Group/nat64dns/releases/download/v0.1.0-alpha-1/nat64dns-0.1.0-1.fc44.x86_64.rpm
   - type: systemd
     system:
       enabled:
